@@ -78,6 +78,11 @@ func (a *SettingController) initRouter(g *gin.RouterGroup) {
 	g.POST("/apiTokens/setEnabled/:id", a.setApiTokenEnabled)
 	g.POST("/testSmtp", a.testSmtp)
 	g.POST("/testTgBot", a.testTgBot)
+	// Multi-user management
+	g.GET("/users", a.listUsers)
+	g.POST("/users/create", a.createUser)
+	g.POST("/users/delete/:id", a.deleteUser)
+	g.POST("/users/update/:id", a.updateUserByID)
 }
 
 func (a *SettingController) validateRegex(c *gin.Context) {
@@ -286,6 +291,79 @@ func (a *SettingController) setApiTokenEnabled(c *gin.Context) {
 		return
 	}
 	jsonMsg(c, I18nWeb(c, "pages.settings.toasts.modifySettings"), a.apiTokenService.SetEnabledExpectedScope(id, form.ExpectedScope, form.Enabled))
+}
+
+// listUsers returns all panel users (passwords omitted).
+func (a *SettingController) listUsers(c *gin.Context) {
+	users, err := a.userService.ListUsers()
+	jsonObj(c, users, err)
+}
+
+type createUserForm struct {
+	Username    string `json:"username" form:"username"`
+	Password    string `json:"password" form:"password"`
+	Role        string `json:"role" form:"role"`
+	Permissions string `json:"permissions" form:"permissions"`
+}
+
+// createUser adds a new panel user.
+func (a *SettingController) createUser(c *gin.Context) {
+	form := &createUserForm{}
+	if err := c.ShouldBind(form); err != nil {
+		jsonMsg(c, "create user", err)
+		return
+	}
+	user, err := a.userService.CreateUser(
+		strings.TrimSpace(form.Username),
+		form.Password,
+		strings.TrimSpace(form.Role),
+		strings.TrimSpace(form.Permissions),
+	)
+	jsonObj(c, user, err)
+}
+
+// deleteUser removes a panel user by ID.
+func (a *SettingController) deleteUser(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, "delete user", err)
+		return
+	}
+	me := session.GetLoginUser(c)
+	if me != nil && me.Id == id {
+		jsonMsg(c, "delete user", errors.New("cannot delete your own account"))
+		return
+	}
+	jsonMsg(c, "delete user", a.userService.DeleteUser(id))
+}
+
+type updateUserByIDForm struct {
+	Username    string `json:"username" form:"username"`
+	Password    string `json:"password" form:"password"`
+	Role        string `json:"role" form:"role"`
+	Permissions string `json:"permissions" form:"permissions"`
+}
+
+// updateUserByID updates a panel user's profile.
+func (a *SettingController) updateUserByID(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		jsonMsg(c, "update user", err)
+		return
+	}
+	form := &updateUserByIDForm{}
+	if bindErr := c.ShouldBind(form); bindErr != nil {
+		jsonMsg(c, "update user", bindErr)
+		return
+	}
+	err = a.userService.UpdateUserByID(
+		id,
+		strings.TrimSpace(form.Username),
+		form.Password,
+		strings.TrimSpace(form.Role),
+		strings.TrimSpace(form.Permissions),
+	)
+	jsonMsg(c, "update user", err)
 }
 
 func (a *SettingController) testSmtp(c *gin.Context) {

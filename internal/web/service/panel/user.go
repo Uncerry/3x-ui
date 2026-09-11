@@ -140,6 +140,86 @@ func (s *UserService) UpdateUser(id int, username string, password string) error
 		Error
 }
 
+// ListUsers returns all users (without passwords).
+func (s *UserService) ListUsers() ([]model.User, error) {
+	db := database.GetDB()
+	var users []model.User
+	err := db.Model(model.User{}).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	// clear passwords before returning
+	for i := range users {
+		users[i].Password = ""
+	}
+	return users, nil
+}
+
+// CreateUser inserts a new user with a hashed password.
+func (s *UserService) CreateUser(username, password, role, permissions string) (*model.User, error) {
+	if username == "" {
+		return nil, errors.New("username cannot be empty")
+	}
+	if password == "" {
+		return nil, errors.New("password cannot be empty")
+	}
+	db := database.GetDB()
+	var count int64
+	if err := db.Model(model.User{}).Where("username = ?", username).Count(&count).Error; err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, errors.New("username already exists")
+	}
+	hashed, err := crypto.HashPasswordAsBcrypt(password)
+	if err != nil {
+		return nil, err
+	}
+	user := &model.User{
+		Username:    username,
+		Password:    hashed,
+		Role:        role,
+		Permissions: permissions,
+	}
+	if err := db.Create(user).Error; err != nil {
+		return nil, err
+	}
+	user.Password = ""
+	return user, nil
+}
+
+// DeleteUser removes a user by id, refusing to delete the last user.
+func (s *UserService) DeleteUser(id int) error {
+	db := database.GetDB()
+	var count int64
+	if err := db.Model(model.User{}).Count(&count).Error; err != nil {
+		return err
+	}
+	if count <= 1 {
+		return errors.New("cannot delete the last user")
+	}
+	return db.Where("id = ?", id).Delete(&model.User{}).Error
+}
+
+// UpdateUserByID updates username, password (if non-empty), role and permissions for a user.
+func (s *UserService) UpdateUserByID(id int, username, password, role, permissions string) error {
+	db := database.GetDB()
+	updates := map[string]any{
+		"username":    username,
+		"role":        role,
+		"permissions": permissions,
+	}
+	if password != "" {
+		hashed, err := crypto.HashPasswordAsBcrypt(password)
+		if err != nil {
+			return err
+		}
+		updates["password"] = hashed
+		updates["login_epoch"] = gorm.Expr("login_epoch + 1")
+	}
+	return db.Model(model.User{}).Where("id = ?", id).Updates(updates).Error
+}
+
 func (s *UserService) UpdateFirstUser(username string, password string) error {
 	if username == "" {
 		return errors.New("username can not be empty")

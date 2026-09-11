@@ -14,7 +14,14 @@ import {
   Tabs,
   message,
 } from 'antd';
-import { ApiOutlined, SafetyOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
+import {
+  ApiOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  SafetyOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 import { ClipboardManager, HttpUtil, IntlUtil, RandomUtil } from '@/utils';
 import type { AllSetting } from '@/models/setting';
 import { SettingListItem } from '@/components/ui';
@@ -36,6 +43,13 @@ interface ApiTokenRow {
   createdAt: number;
   scope: 'admin' | 'monitor' | 'node-sync';
   expiresAt: number;
+}
+
+interface AdminUser {
+  id: number;
+  username: string;
+  role: string;
+  permissions: string;
 }
 
 interface SecurityTabProps {
@@ -92,31 +106,22 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
   const [creating, setCreating] = useState(false);
   const [createdToken, setCreatedToken] = useState<{ name: string; token: string } | null>(null);
 
-  const [adminUsers, setAdminUsers] = useState([
-    {
-      username: 'root',
-      role: 'Owner',
-      status: 'online',
-      permissions: ['inbounds.read', 'clients.read', 'outbounds.read', 'settings.write'],
-    },
-    {
-      username: 'turk-ops',
-      role: 'Operator',
-      status: 'online',
-      permissions: ['inbounds.read', 'inbounds.write', 'clients.read'],
-    },
-    {
-      username: 'geo-viewer',
-      role: 'Auditor',
-      status: 'offline',
-      permissions: ['inbounds.read', 'clients.read'],
-    },
-  ]);
-  const [newUser, setNewUser] = useState({ username: '', role: 'Operator' });
+  // Admin users state
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(true);
+  const [newUser, setNewUser] = useState({ username: '', password: '', role: 'Operator' });
   const [permissionFlags, setPermissionFlags] = useState<string[]>([
     'inbounds.read',
     'clients.read',
   ]);
+  const [editUser, setEditUser] = useState<AdminUser | null>(null);
+  const [editForm, setEditForm] = useState({
+    username: '',
+    password: '',
+    role: 'Operator',
+    permissions: '',
+  });
+  const [editOpen, setEditOpen] = useState(false);
 
   const openTfa = useCallback((opts: Omit<TfaState, 'open'>) => {
     setTfa({ ...opts, open: true });
@@ -297,23 +302,89 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
     }
   }
 
-  function addAdminUser() {
+  const fetchAdminUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const msg = (await HttpUtil.get('/panel/api/setting/users')) as ApiMsg<AdminUser[]>;
+      if (msg?.success) setAdminUsers(Array.isArray(msg.obj) ? msg.obj : []);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchAdminUsers();
+  }, [fetchAdminUsers]);
+
+  async function addAdminUser() {
     const username = newUser.username.trim();
     if (!username) {
-      messageApi.error('User name is required');
+      messageApi.error('Username is required');
       return;
     }
-    setAdminUsers((prev) => [
-      ...prev,
-      {
-        username,
-        role: newUser.role,
-        status: 'online',
-        permissions: permissionFlags,
+    if (!newUser.password) {
+      messageApi.error('Password is required');
+      return;
+    }
+    const msg = (await HttpUtil.post('/panel/api/setting/users/create', {
+      username,
+      password: newUser.password,
+      role: newUser.role,
+      permissions: permissionFlags.join(','),
+    })) as ApiMsg;
+    if (msg?.success) {
+      setNewUser({ username: '', password: '', role: 'Operator' });
+      setPermissionFlags(['inbounds.read', 'clients.read']);
+      await fetchAdminUsers();
+    } else {
+      messageApi.error(msg?.msg ?? 'Failed to create user');
+    }
+  }
+
+  function openEditUser(u: AdminUser) {
+    setEditUser(u);
+    setEditForm({
+      username: u.username,
+      password: '',
+      role: u.role,
+      permissions: u.permissions,
+    });
+    setEditOpen(true);
+  }
+
+  async function confirmEditUser() {
+    if (!editUser) return;
+    const msg = (await HttpUtil.post(`/panel/api/setting/users/update/${editUser.id}`, {
+      username: editForm.username.trim(),
+      password: editForm.password,
+      role: editForm.role,
+      permissions: editForm.permissions,
+    })) as ApiMsg;
+    if (msg?.success) {
+      setEditOpen(false);
+      setEditUser(null);
+      await fetchAdminUsers();
+    } else {
+      messageApi.error(msg?.msg ?? 'Failed to update user');
+    }
+  }
+
+  function confirmDeleteUser(u: AdminUser) {
+    modal.confirm({
+      title: `Delete "${u.username}"?`,
+      content: 'This action cannot be undone.',
+      okText: 'Delete',
+      cancelText: 'Cancel',
+      okType: 'danger',
+      onOk: async () => {
+        const msg = (await HttpUtil.post(`/panel/api/setting/users/delete/${u.id}`, {})) as ApiMsg;
+        if (msg?.success) {
+          await fetchAdminUsers();
+        } else {
+          messageApi.error(msg?.msg ?? 'Failed to delete user');
+        }
       },
-    ]);
-    setNewUser({ username: '', role: 'Operator' });
-    setPermissionFlags(['inbounds.read', 'clients.read']);
+    });
   }
 
   return (
@@ -442,26 +513,34 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                       Create a user, assign role, and apply permission flags.
                     </span>
                   </div>
-                  <div className="admin-add-user">
-                    <Input
-                      placeholder="username"
-                      value={newUser.username}
-                      onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
-                      size="small"
-                      style={{ width: 160 }}
-                    />
-                    <Select
-                      size="small"
-                      style={{ width: 130 }}
-                      value={newUser.role}
-                      onChange={(v) => setNewUser({ ...newUser, role: String(v) })}
-                      options={[
-                        { value: 'Owner', label: 'Owner' },
-                        { value: 'Operator', label: 'Operator' },
-                        { value: 'Auditor', label: 'Auditor' },
-                      ]}
-                    />
-                  </div>
+                </div>
+
+                <div className="admin-add-user-form">
+                  <Input
+                    placeholder="username"
+                    value={newUser.username}
+                    onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                    size="small"
+                    style={{ width: 150 }}
+                  />
+                  <Input.Password
+                    placeholder="password"
+                    value={newUser.password}
+                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                    size="small"
+                    style={{ width: 150 }}
+                  />
+                  <Select
+                    size="small"
+                    style={{ width: 120 }}
+                    value={newUser.role}
+                    onChange={(v) => setNewUser({ ...newUser, role: String(v) })}
+                    options={[
+                      { value: 'Owner', label: 'Owner' },
+                      { value: 'Operator', label: 'Operator' },
+                      { value: 'Auditor', label: 'Auditor' },
+                    ]}
+                  />
                 </div>
 
                 <div className="permission-flag-row">
@@ -480,47 +559,115 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                   />
                 </div>
 
-                <div className="admin-management-grid">
-                  {adminUsers.map((user) => (
-                    <div className="admin-user-card" key={user.username}>
-                      <div className="admin-user-card-head">
-                        <div>
-                          <span className="admin-user-name">{user.username}</span>
-                          <span className="admin-user-role">{user.role}</span>
-                        </div>
-                        <span className={`admin-user-status ${user.status}`}>{user.status}</span>
-                      </div>
-                      <div className="admin-user-permissions">
-                        {user.permissions.map((permission) => (
-                          <span className="admin-permission-chip" key={permission}>
-                            {permission}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="country-config-block">
-                  <div className="country-config-title">Country proxy policy</div>
-                  <div className="country-config-row">
-                    <span>Turkey SOCKS5</span>
-                    <span className="country-config-badge">proxy://tr-socks5</span>
-                    <span className="country-config-badge">inbound: country-tr</span>
-                    <span className="country-config-badge">permission flags: geo-limits</span>
-                  </div>
-                </div>
-
                 <div className="admin-add-user-submit">
                   <Button type="primary" size="small" onClick={addAdminUser}>
                     Add user
                   </Button>
                 </div>
+
+                <Spin spinning={usersLoading}>
+                  {!adminUsers.length && !usersLoading && (
+                    <Empty description="No users" />
+                  )}
+                  <div className="admin-management-grid">
+                    {adminUsers.map((u) => {
+                      const perms = u.permissions
+                        ? u.permissions.split(',').filter(Boolean)
+                        : [];
+                      return (
+                        <div className="admin-user-card" key={u.id}>
+                          <div className="admin-user-card-head">
+                            <div>
+                              <span className="admin-user-name">{u.username}</span>
+                              <span className="admin-user-role">{u.role}</span>
+                            </div>
+                            <div className="admin-user-card-actions">
+                              <Button
+                                size="small"
+                                type="text"
+                                icon={<EditOutlined />}
+                                onClick={() => openEditUser(u)}
+                              />
+                              <Button
+                                size="small"
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => confirmDeleteUser(u)}
+                              />
+                            </div>
+                          </div>
+                          <div className="admin-user-permissions">
+                            {perms.map((permission) => (
+                              <span className="admin-permission-chip" key={permission}>
+                                {permission}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Spin>
               </div>
             ),
           },
         ]}
       />
+
+      {/* Edit user modal */}
+      <Modal
+        open={editOpen}
+        title={`Edit user: ${editUser?.username ?? ''}`}
+        okText="Save"
+        cancelText="Cancel"
+        onOk={confirmEditUser}
+        onCancel={() => {
+          setEditOpen(false);
+          setEditUser(null);
+        }}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Username" required>
+            <Input
+              value={editForm.username}
+              onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+            />
+          </Form.Item>
+          <Form.Item label="New password (leave blank to keep current)">
+            <Input.Password
+              value={editForm.password}
+              onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+              autoComplete="new-password"
+            />
+          </Form.Item>
+          <Form.Item label="Role">
+            <Select
+              value={editForm.role}
+              onChange={(v) => setEditForm({ ...editForm, role: String(v) })}
+              options={[
+                { value: 'Owner', label: 'Owner' },
+                { value: 'Operator', label: 'Operator' },
+                { value: 'Auditor', label: 'Auditor' },
+              ]}
+            />
+          </Form.Item>
+          <Form.Item label="Permission flags">
+            <Checkbox.Group
+              options={[
+                { label: 'inbounds.read', value: 'inbounds.read' },
+                { label: 'inbounds.write', value: 'inbounds.write' },
+                { label: 'clients.read', value: 'clients.read' },
+                { label: 'clients.write', value: 'clients.write' },
+                { label: 'settings.write', value: 'settings.write' },
+                { label: 'routes.read', value: 'routes.read' },
+              ]}
+              value={editForm.permissions ? editForm.permissions.split(',').filter(Boolean) : []}
+              onChange={(v) => setEditForm({ ...editForm, permissions: v.join(',') })}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Modal
         open={createOpen}

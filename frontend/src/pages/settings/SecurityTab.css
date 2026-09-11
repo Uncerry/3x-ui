@@ -249,3 +249,18 @@
   display: flex;
   justify-content: flex-end;
 }
+
+.admin-add-user-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 0 0 4px;
+}
+
+.admin-user-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
