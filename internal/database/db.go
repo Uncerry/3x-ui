@@ -1214,10 +1214,15 @@ func initUser() error {
 		user := &model.User{
 			Username: defaultUsername,
 			Password: hashedPassword,
+			Role:     "Owner",
 		}
 		return db.Create(user).Error
 	}
-	return nil
+	// Backfill: existing users with no role get Owner (first user) or keep empty.
+	// We promote the very first user to Owner so existing installs keep working.
+	return db.Exec(
+		"UPDATE users SET role = 'Owner' WHERE (role IS NULL OR role = '') AND id = (SELECT MIN(id) FROM users)",
+	).Error
 }
 
 func seedRandomSubscriptionPaths() error {
