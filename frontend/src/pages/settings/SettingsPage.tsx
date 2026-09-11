@@ -39,6 +39,7 @@ interface ApiMsg {
 const tabSlugs = [
   'general',
   'security',
+  'users',
   'telegram',
   'email',
   'subscription',
@@ -206,6 +207,7 @@ export default function SettingsPage() {
   const categoryBody = useMemo(() => {
     switch (activeSlug) {
       case 'security':
+      case 'users':
         return (
           <SecurityTab
             allSetting={allSetting}

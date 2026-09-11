@@ -252,6 +252,11 @@ export default function AppSidebar() {
         label: t('pages.settings.securitySettings'),
       },
       {
+        key: '/settings#users',
+        icon: <TeamOutlined />,
+        label: 'Users',
+      },
+      {
         key: '/settings#telegram',
         icon: <MessageOutlined />,
         label: t('pages.settings.TGBotSettings'),

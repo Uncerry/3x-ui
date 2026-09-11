@@ -150,6 +150,7 @@ function firstRhfValidationIssue(
 function tabForValidationPath(path: PropertyKey[]): string {
   if (path[0] === 'settings') return 'protocol';
   if (path[0] === 'sniffing') return 'sniffing';
+  if (path[0] === 'proxySock5' || path[0] === 'proxyIp') return 'route';
   if (path[0] === 'streamSettings') {
     if (path[1] === 'security' || path[1] === 'realitySettings' || path[1] === 'tlsSettings')
       return 'security';
@@ -688,23 +689,6 @@ export default function InboundFormModal({
         </>
       )}
 
-      <FormField name="proxySock5" label="SOCKS5 Source">
-        <Select
-          allowClear
-          showSearch
-          placeholder="Turkey SOCKS5"
-          options={[
-            { value: 'tr-socks5', label: 'Turkey SOCKS5 — proxy://tr-socks5:1080' },
-            { value: 'geo-us', label: 'United States SOCKS5 — proxy://us-socks5:1080' },
-            { value: 'geo-jp', label: 'Japan SOCKS5 — proxy://jp-socks5:1080' },
-          ]}
-        />
-      </FormField>
-
-      <FormField name="proxyIp" label="Assigned IP / Client IP">
-        <Input placeholder="172.16.0.22" />
-      </FormField>
-
       <FormField
         name="subSortIndex"
         label={labelWithHint(
@@ -963,6 +947,27 @@ export default function InboundFormModal({
     </>
   );
 
+  const routeTab = (
+    <>
+      <FormField name="proxySock5" label="SOCKS5 Source">
+        <Select
+          allowClear
+          showSearch
+          placeholder="Select route"
+          options={[
+            { value: 'tr-socks5', label: 'Regional Route — proxy://tr-socks5:1080' },
+            { value: 'geo-us', label: 'Regional Route — proxy://us-socks5:1080' },
+            { value: 'geo-jp', label: 'Regional Route — proxy://jp-socks5:1080' },
+          ]}
+        />
+      </FormField>
+
+      <FormField name="proxyIp" label="Assigned IP / Client IP">
+        <Input placeholder="172.16.0.22" />
+      </FormField>
+    </>
+  );
+
   const tlsOk = canEnableTls({ protocol, streamSettings: { network, security } });
   const realityOk = canEnableReality({ protocol, streamSettings: { network, security } });
   const tlsOnly = protocol === Protocols.HYSTERIA;
@@ -1155,6 +1160,12 @@ export default function InboundFormModal({
                   ] as string[]
                 ).includes(protocol) || isFallbackHost
                   ? [
+                      {
+                        key: 'route',
+                        label: 'Route',
+                        children: routeTab,
+                        forceRender: true,
+                      },
                       {
                         key: 'protocol',
                         label: t('pages.inbounds.protocol'),
