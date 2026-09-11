@@ -553,6 +553,10 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                       { label: 'clients.write', value: 'clients.write' },
                       { label: 'settings.write', value: 'settings.write' },
                       { label: 'routes.read', value: 'routes.read' },
+                      { label: 'xray.manage', value: 'xray.manage' },
+                      { label: 'server.admin', value: 'server.admin' },
+                      { label: 'nodes.read', value: 'nodes.read' },
+                      { label: 'nodes.manage', value: 'nodes.manage' },
                     ]}
                     value={permissionFlags}
                     onChange={(v) => setPermissionFlags(v.map(String))}
@@ -661,6 +665,10 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                 { label: 'clients.write', value: 'clients.write' },
                 { label: 'settings.write', value: 'settings.write' },
                 { label: 'routes.read', value: 'routes.read' },
+                { label: 'xray.manage', value: 'xray.manage' },
+                { label: 'server.admin', value: 'server.admin' },
+                { label: 'nodes.read', value: 'nodes.read' },
+                { label: 'nodes.manage', value: 'nodes.manage' },
               ]}
               value={editForm.permissions ? editForm.permissions.split(',').filter(Boolean) : []}
               onChange={(v) => setEditForm({ ...editForm, permissions: v.join(',') })}

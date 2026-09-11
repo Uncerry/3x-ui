@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Permission constants — stored comma-separated in users.permissions column.
+// All available permission flags stored comma-separated in users.permissions.
 const (
 	PermInboundsRead  = "inbounds.read"
 	PermInboundsWrite = "inbounds.write"
@@ -17,64 +17,95 @@ const (
 	PermClientsWrite  = "clients.write"
 	PermSettingsWrite = "settings.write"
 	PermRoutesRead    = "routes.read"
+	PermXrayManage    = "xray.manage"   // stop/restart/install xray
+	PermServerAdmin   = "server.admin"  // importDB, updatePanel, updateGeofile, logs
+	PermNodesManage   = "nodes.manage"  // add/update/delete nodes
+	PermNodesRead     = "nodes.read"    // list/get nodes
 )
 
-// routePermissions maps relative route patterns (after /panel/api) to the
-// permission required to call them.  Patterns use the same wildcard syntax
-// as Gin so the match can be done with simple string operations; we keep
-// the table sorted by specificity — first match wins.
-//
-// A route NOT listed here is unrestricted for any logged-in session user
-// (e.g. server status, read-only dashboard data that every role sees).
+// routePermissions maps relative paths (after /panel/api) to required permission.
+// Empty method = any method. First matching entry wins — order by specificity.
 var routePermissions = []routePerm{
-	// ── inbounds ─────────────────────────────────────────────────────────
-	{prefix: "/inbounds", method: http.MethodGet, perm: PermInboundsRead},
-	{prefix: "/inbounds/add", method: http.MethodPost, perm: PermInboundsWrite},
-	{prefix: "/inbounds/del/", method: http.MethodPost, perm: PermInboundsWrite},
-	{prefix: "/inbounds/bulkDel", method: http.MethodPost, perm: PermInboundsWrite},
-	{prefix: "/inbounds/update/", method: http.MethodPost, perm: PermInboundsWrite},
-	{prefix: "/inbounds/setEnable/", method: http.MethodPost, perm: PermInboundsWrite},
-	{prefix: "/inbounds/", method: http.MethodPost, perm: PermInboundsWrite}, // catch-all POST
-	{prefix: "/inbounds/import", method: http.MethodPost, perm: PermInboundsWrite},
-	// ── clients ──────────────────────────────────────────────────────────
-	{prefix: "/clients", method: http.MethodGet, perm: PermClientsRead},
-	{prefix: "/clients/add", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/update/", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/del/", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkDel", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkCreate", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkAttach", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkDetach", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkAdjust", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkEnable", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkDisable", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/bulkResetTraffic", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/resetAllTraffics", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/resetTraffic/", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/updateTraffic/", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/clearIps/", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/delOrphans", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/delDepleted", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/import", method: http.MethodPost, perm: PermClientsWrite},
-	{prefix: "/clients/", method: http.MethodPost, perm: PermClientsWrite}, // catch-all POST
-	{prefix: "/clients/", method: http.MethodDelete, perm: PermClientsWrite},
-	// ── xray / routing ───────────────────────────────────────────────────
-	{prefix: "/xray", method: http.MethodGet, perm: PermRoutesRead},
-	{prefix: "/xray/", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/xray/update", method: http.MethodPost, perm: PermSettingsWrite},
-	// ── settings ─────────────────────────────────────────────────────────
-	{prefix: "/setting/update", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/updateUser", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/users/create", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/users/delete/", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/users/update/", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/restartPanel", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/apiTokens/create", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/apiTokens/delete/", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/setting/apiTokens/setEnabled/", method: http.MethodPost, perm: PermSettingsWrite},
-	// ── nodes ────────────────────────────────────────────────────────────
-	{prefix: "/nodes", method: http.MethodPost, perm: PermSettingsWrite},
-	{prefix: "/nodes/", method: http.MethodPost, perm: PermSettingsWrite},
+	// ── inbounds ─────────────────────────────────────────────────────────────
+	{"/inbounds", http.MethodGet, PermInboundsRead},
+	{"/inbounds/add", http.MethodPost, PermInboundsWrite},
+	{"/inbounds/del/", http.MethodPost, PermInboundsWrite},
+	{"/inbounds/bulkDel", http.MethodPost, PermInboundsWrite},
+	{"/inbounds/update/", http.MethodPost, PermInboundsWrite},
+	{"/inbounds/setEnable/", http.MethodPost, PermInboundsWrite},
+	{"/inbounds/import", http.MethodPost, PermInboundsWrite},
+	{"/inbounds/", http.MethodPost, PermInboundsWrite},
+
+	// ── clients ──────────────────────────────────────────────────────────────
+	{"/clients", http.MethodGet, PermClientsRead},
+	{"/clients/add", http.MethodPost, PermClientsWrite},
+	{"/clients/update/", http.MethodPost, PermClientsWrite},
+	{"/clients/del/", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkDel", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkCreate", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkAttach", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkDetach", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkAdjust", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkEnable", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkDisable", http.MethodPost, PermClientsWrite},
+	{"/clients/bulkResetTraffic", http.MethodPost, PermClientsWrite},
+	{"/clients/resetAllTraffics", http.MethodPost, PermClientsWrite},
+	{"/clients/resetTraffic/", http.MethodPost, PermClientsWrite},
+	{"/clients/updateTraffic/", http.MethodPost, PermClientsWrite},
+	{"/clients/clearIps/", http.MethodPost, PermClientsWrite},
+	{"/clients/delOrphans", http.MethodPost, PermClientsWrite},
+	{"/clients/delDepleted", http.MethodPost, PermClientsWrite},
+	{"/clients/import", http.MethodPost, PermClientsWrite},
+	{"/clients/", http.MethodPost, PermClientsWrite},
+	{"/clients/", http.MethodDelete, PermClientsWrite},
+
+	// ── xray engine control ──────────────────────────────────────────────────
+	{"/server/stopXrayService", http.MethodPost, PermXrayManage},
+	{"/server/restartXrayService", http.MethodPost, PermXrayManage},
+	{"/server/installXray/", http.MethodPost, PermXrayManage},
+
+	// ── server administration ────────────────────────────────────────────────
+	{"/server/importDB", http.MethodPost, PermServerAdmin},
+	{"/server/updatePanel", http.MethodPost, PermServerAdmin},
+	{"/server/setUpdateChannel", http.MethodPost, PermServerAdmin},
+	{"/server/updateGeofile", http.MethodPost, PermServerAdmin},
+	{"/server/logs/", http.MethodPost, PermServerAdmin},
+	{"/server/xraylogs/", http.MethodPost, PermServerAdmin},
+	{"/server/amneziawglogs/", http.MethodPost, PermServerAdmin},
+	{"/server/getDb", http.MethodGet, PermServerAdmin},
+	{"/server/getMigration", http.MethodGet, PermServerAdmin},
+
+	// ── nodes ────────────────────────────────────────────────────────────────
+	{"/nodes/list", http.MethodGet, PermNodesRead},
+	{"/nodes/get/", http.MethodGet, PermNodesRead},
+	{"/nodes/webCert/", http.MethodGet, PermNodesRead},
+	{"/nodes/history/", http.MethodGet, PermNodesRead},
+	{"/nodes/add", http.MethodPost, PermNodesManage},
+	{"/nodes/update/", http.MethodPost, PermNodesManage},
+	{"/nodes/del/", http.MethodPost, PermNodesManage},
+	{"/nodes/setEnable/", http.MethodPost, PermNodesManage},
+	{"/nodes/test", http.MethodPost, PermNodesManage},
+	{"/nodes/probe/", http.MethodPost, PermNodesManage},
+	{"/nodes/updatePanel", http.MethodPost, PermNodesManage},
+	{"/nodes/mtls/", http.MethodPost, PermNodesManage},
+	{"/nodes/inbounds", http.MethodPost, PermNodesRead},
+
+	// ── xray config / routes ─────────────────────────────────────────────────
+	{"/xray", http.MethodGet, PermRoutesRead},
+	{"/xray/", http.MethodGet, PermRoutesRead},
+	{"/xray/update", http.MethodPost, PermSettingsWrite},
+	{"/xray/", http.MethodPost, PermSettingsWrite},
+
+	// ── panel settings ───────────────────────────────────────────────────────
+	{"/setting/update", http.MethodPost, PermSettingsWrite},
+	{"/setting/updateUser", http.MethodPost, PermSettingsWrite},
+	{"/setting/users/create", http.MethodPost, PermSettingsWrite},
+	{"/setting/users/delete/", http.MethodPost, PermSettingsWrite},
+	{"/setting/users/update/", http.MethodPost, PermSettingsWrite},
+	{"/setting/restartPanel", http.MethodPost, PermSettingsWrite},
+	{"/setting/apiTokens/create", http.MethodPost, PermSettingsWrite},
+	{"/setting/apiTokens/delete/", http.MethodPost, PermSettingsWrite},
+	{"/setting/apiTokens/setEnabled/", http.MethodPost, PermSettingsWrite},
 }
 
 type routePerm struct {
@@ -83,10 +114,6 @@ type routePerm struct {
 	perm   string
 }
 
-// requiredPermission returns the permission string needed for a given relative
-// API path and HTTP method, or "" if the endpoint is open to all logged-in
-// users.  First prefix-match (longest wins because the table is ordered by
-// specificity) is used.
 func requiredPermission(relPath, method string) string {
 	for _, rp := range routePermissions {
 		if rp.method != "" && rp.method != method {
@@ -99,8 +126,8 @@ func requiredPermission(relPath, method string) string {
 	return ""
 }
 
-// userHasPermission reports whether a user's comma-separated permissions
-// string includes the requested permission.  Owner role always passes.
+// userHasPermission checks the comma-separated permissions string.
+// Owner role bypasses all checks.
 func userHasPermission(permissions, role, perm string) bool {
 	if perm == "" {
 		return true
@@ -108,7 +135,7 @@ func userHasPermission(permissions, role, perm string) bool {
 	if strings.EqualFold(role, "Owner") {
 		return true
 	}
-	for p := range strings.SplitSeq(permissions, ",") {
+	for _, p := range strings.Split(permissions, ",") {
 		if strings.TrimSpace(p) == perm {
 			return true
 		}
@@ -116,24 +143,19 @@ func userHasPermission(permissions, role, perm string) bool {
 	return false
 }
 
-// PermissionMiddleware enforces per-user permission flags for session-login
-// callers.  API-token callers already go through enforceTokenScope and are
-// not re-checked here (api_authed flag is set).
+// PermissionMiddleware enforces per-user permission flags for session-login callers.
+// API-token callers are already handled by enforceTokenScope.
 func PermissionMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// API-token callers are governed by enforceTokenScope — skip.
 		if c.GetBool("api_authed") {
 			c.Next()
 			return
 		}
-
 		user := session.GetLoginUser(c)
 		if user == nil {
-			// Not logged in — checkLogin already handles this, but be safe.
 			c.Next()
 			return
 		}
-
 		rel := relPermPath(c.FullPath())
 		required := requiredPermission(rel, c.Request.Method)
 		if !userHasPermission(user.Permissions, user.Role, required) {
@@ -147,7 +169,6 @@ func PermissionMiddleware() gin.HandlerFunc {
 	}
 }
 
-// relPermPath strips the /panel/api prefix so the table stays clean.
 func relPermPath(fullPath string) string {
 	const marker = "/panel/api"
 	_, after, ok := strings.Cut(fullPath, marker)
