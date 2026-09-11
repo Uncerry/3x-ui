@@ -33,16 +33,26 @@ const initialUltra = readBool(STORAGE_ULTRA, false);
 applyDom(initialDark, initialUltra);
 
 const DARK_TOKENS = {
-  colorBgBase: '#1a1b1f',
-  colorBgLayout: '#1a1b1f',
-  colorBgContainer: '#23252b',
-  colorBgElevated: '#2d2f37',
+  colorBgBase: '#071c22',
+  colorBgLayout: '#071c22',
+  colorBgContainer: '#0d313b',
+  colorBgElevated: '#123b46',
+  colorPrimary: '#22d3ee',
+  colorInfo: '#22d3ee',
+  colorSuccess: '#2dd4bf',
+  colorWarning: '#fbbf24',
+  colorError: '#f87171',
 };
 const ULTRA_DARK_TOKENS = {
   colorBgBase: '#000',
   colorBgLayout: '#000',
-  colorBgContainer: '#101013',
-  colorBgElevated: '#1a1a1e',
+  colorBgContainer: '#05191f',
+  colorBgElevated: '#07252e',
+  colorPrimary: '#22d3ee',
+  colorInfo: '#22d3ee',
+  colorSuccess: '#2dd4bf',
+  colorWarning: '#fbbf24',
+  colorError: '#f87171',
 };
 const DARK_LAYOUT_TOKENS = {
   bodyBg: '#1a1b1f',
@@ -91,9 +101,9 @@ const LIGHT_CONTRAST_TOKENS = {
   colorSuccessText: '#237804',
 };
 const LIGHT_BUTTON_TOKENS = {
-  colorPrimary: '#0958d9',
-  colorPrimaryHover: '#2468e5',
-  colorPrimaryActive: '#073ea8',
+  colorPrimary: '#06b6d4',
+  colorPrimaryHover: '#22d3ee',
+  colorPrimaryActive: '#0891b2',
 };
 
 // hashed:false drops the `:where(.css-<hash>)` wrapper antd puts around every

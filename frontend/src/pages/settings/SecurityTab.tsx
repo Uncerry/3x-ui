@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Empty, Form, Input, Modal, Space, Spin, Switch, Tabs, message } from 'antd';
-import { ApiOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons';
+import { ApiOutlined, SafetyOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { ClipboardManager, HttpUtil, IntlUtil, RandomUtil } from '@/utils';
 import type { AllSetting } from '@/models/setting';
 import { SettingListItem } from '@/components/ui';
@@ -78,6 +78,28 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
   const [createName, setCreateName] = useState('');
   const [creating, setCreating] = useState(false);
   const [createdToken, setCreatedToken] = useState<{ name: string; token: string } | null>(null);
+
+  const [adminUsers, setAdminUsers] = useState([
+    {
+      username: 'root',
+      role: 'Owner',
+      status: 'online',
+      permissions: ['inbounds.read', 'clients.read', 'outbounds.read', 'settings.write'],
+    },
+    {
+      username: 'turk-ops',
+      role: 'Operator',
+      status: 'online',
+      permissions: ['inbounds.read', 'inbounds.write', 'clients.read'],
+    },
+    {
+      username: 'geo-viewer',
+      role: 'Auditor',
+      status: 'offline',
+      permissions: ['inbounds.read', 'clients.read'],
+    },
+  ]);
+  const [newUser, setNewUser] = useState({ username: '', role: 'Operator' });
 
   const openTfa = useCallback((opts: Omit<TfaState, 'open'>) => {
     setTfa({ ...opts, open: true });
@@ -258,6 +280,24 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
     }
   }
 
+  function addAdminUser() {
+    const username = newUser.username.trim();
+    if (!username) {
+      messageApi.error('User name is required');
+      return;
+    }
+    setAdminUsers((prev) => [
+      ...prev,
+      {
+        username,
+        role: newUser.role,
+        status: 'online',
+        permissions: ['inbounds.read', 'clients.read'],
+      },
+    ]);
+    setNewUser({ username: '', role: 'Operator' });
+  }
+
   return (
     <>
       {messageContextHolder}
@@ -369,6 +409,72 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                     </div>
                   ))}
                 </Spin>
+              </div>
+            ),
+          },
+          {
+            key: '4',
+            label: catTabLabel(<TeamOutlined />, 'Admin Access', isMobile),
+            children: (
+              <div className="admin-management-section">
+                <div className="admin-management-head">
+                  <div className="admin-management-title">
+                    <span className="admin-management-kicker">Admin Management</span>
+                    <span className="admin-management-copy">
+                      Example: add users, assign roles, and assign country/request proxy rights.
+                    </span>
+                  </div>
+                  <div className="admin-add-user">
+                    <Input
+                      placeholder="username"
+                      value={newUser.username}
+                      onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                      size="small"
+                      style={{ width: 160 }}
+                    />
+                    <Input
+                      placeholder="role"
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                      size="small"
+                      style={{ width: 120 }}
+                    />
+                    <Button type="primary" size="small" onClick={addAdminUser}>
+                      Add user
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="admin-management-grid">
+                  {adminUsers.map((user) => (
+                    <div className="admin-user-card" key={user.username}>
+                      <div className="admin-user-card-head">
+                        <div>
+                          <span className="admin-user-name">{user.username}</span>
+                          <span className="admin-user-role">{user.role}</span>
+                        </div>
+                        <span className={`admin-user-status ${user.status}`}>{user.status}</span>
+                      </div>
+                      <div className="admin-user-permissions">
+                        {user.permissions.map((permission) => (
+                          <span className="admin-permission-chip" key={permission}>
+                            {permission}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="country-config-block">
+                  <div className="country-config-title">Country proxy policy</div>
+                  <div className="country-config-row">
+                    <span>Turkey SOCKS5</span>
+                    <span className="country-config-badge">proxy://tr-socks5</span>
+                    <span className="country-config-badge">inbound: country-tr</span>
+                    <span className="country-config-badge">permissions: geo-limits</span>
+                  </div>
+                </div>
               </div>
             ),
           },

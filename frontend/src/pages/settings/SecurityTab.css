@@ -93,3 +93,139 @@
   display: flex;
   align-items: center;
 }
+
+.admin-management-section {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-management-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-management-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.admin-management-kicker {
+  font-size: 12px;
+  font-weight: 700;
+  color: #22d3ee;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-management-copy {
+  font-size: 12px;
+  color: var(--ant-color-text-description);
+}
+
+.admin-add-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-management-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.admin-user-card {
+  border: 1px solid var(--ant-color-border);
+  border-radius: 10px;
+  background: var(--ant-color-bg-container);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-user-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-user-name {
+  display: block;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.admin-user-role {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--ant-color-text-description);
+}
+
+.admin-user-status {
+  font-size: 11px;
+  border-radius: 99px;
+  padding: 2px 8px;
+  background: var(--ant-color-fill-tertiary);
+  color: var(--ant-color-text);
+  text-transform: capitalize;
+}
+
+.admin-user-status.online {
+  color: var(--ant-color-success);
+}
+
+.admin-user-status.offline {
+  color: var(--ant-color-text-quaternary);
+}
+
+.admin-user-permissions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-permission-chip,
+.country-config-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: var(--ant-color-fill-tertiary);
+  border: 1px solid var(--ant-color-border-secondary);
+}
+
+.country-config-block {
+  border: 1px dashed var(--ant-color-border);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.country-config-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #22d3ee;
+}
+
+.country-config-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.country-config-row > span:first-child {
+  font-weight: 700;
+}
