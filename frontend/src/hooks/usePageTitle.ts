@@ -27,3 +27,4 @@ export function usePageTitle() {
     document.title = host ? `${host} - ${title}` : title;
   }, [pathname, t]);
 }
+

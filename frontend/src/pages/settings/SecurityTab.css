@@ -203,6 +203,21 @@
   border: 1px solid var(--ant-color-border-secondary);
 }
 
+.permission-flag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--ant-color-fill-tertiary);
+}
+
+.permission-flag-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .country-config-block {
   border: 1px dashed var(--ant-color-border);
   border-radius: 10px;
@@ -228,4 +243,9 @@
 
 .country-config-row > span:first-child {
   font-weight: 700;
+}
+
+.admin-add-user-submit {
+  display: flex;
+  justify-content: flex-end;
 }

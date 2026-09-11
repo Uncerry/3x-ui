@@ -93,6 +93,8 @@ export const InboundFormBaseSchema = z.object({
   tag: z.string().default(''),
   expiryTime: z.number().int().default(0),
   clientStats: z.string().optional(),
+  proxySock5: z.string().default(''),
+  proxyIp: z.string().default(''),
   sniffing: SniffingSchema.default({
     enabled: false,
     destOverride: ['http', 'tls', 'quic', 'fakedns'],

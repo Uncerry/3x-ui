@@ -1,6 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Empty, Form, Input, Modal, Space, Spin, Switch, Tabs, message } from 'antd';
+import {
+  Button,
+  Checkbox,
+  Empty,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Spin,
+  Switch,
+  Tabs,
+  message,
+} from 'antd';
 import { ApiOutlined, SafetyOutlined, TeamOutlined, UserOutlined } from '@ant-design/icons';
 import { ClipboardManager, HttpUtil, IntlUtil, RandomUtil } from '@/utils';
 import type { AllSetting } from '@/models/setting';
@@ -100,6 +113,10 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
     },
   ]);
   const [newUser, setNewUser] = useState({ username: '', role: 'Operator' });
+  const [permissionFlags, setPermissionFlags] = useState<string[]>([
+    'inbounds.read',
+    'clients.read',
+  ]);
 
   const openTfa = useCallback((opts: Omit<TfaState, 'open'>) => {
     setTfa({ ...opts, open: true });
@@ -292,10 +309,11 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
         username,
         role: newUser.role,
         status: 'online',
-        permissions: ['inbounds.read', 'clients.read'],
+        permissions: permissionFlags,
       },
     ]);
     setNewUser({ username: '', role: 'Operator' });
+    setPermissionFlags(['inbounds.read', 'clients.read']);
   }
 
   return (
@@ -414,14 +432,14 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
           },
           {
             key: '4',
-            label: catTabLabel(<TeamOutlined />, 'Admin Access', isMobile),
+            label: catTabLabel(<TeamOutlined />, 'Users', isMobile),
             children: (
               <div className="admin-management-section">
                 <div className="admin-management-head">
                   <div className="admin-management-title">
-                    <span className="admin-management-kicker">Admin Management</span>
+                    <span className="admin-management-kicker">Users</span>
                     <span className="admin-management-copy">
-                      Example: add users, assign roles, and assign country/request proxy rights.
+                      Create a user, assign role, and apply permission flags.
                     </span>
                   </div>
                   <div className="admin-add-user">
@@ -432,17 +450,34 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                       size="small"
                       style={{ width: 160 }}
                     />
-                    <Input
-                      placeholder="role"
-                      value={newUser.role}
-                      onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                    <Select
                       size="small"
-                      style={{ width: 120 }}
+                      style={{ width: 130 }}
+                      value={newUser.role}
+                      onChange={(v) => setNewUser({ ...newUser, role: String(v) })}
+                      options={[
+                        { value: 'Owner', label: 'Owner' },
+                        { value: 'Operator', label: 'Operator' },
+                        { value: 'Auditor', label: 'Auditor' },
+                      ]}
                     />
-                    <Button type="primary" size="small" onClick={addAdminUser}>
-                      Add user
-                    </Button>
                   </div>
+                </div>
+
+                <div className="permission-flag-row">
+                  <span className="permission-flag-label">Permission flags</span>
+                  <Checkbox.Group
+                    options={[
+                      { label: 'inbounds.read', value: 'inbounds.read' },
+                      { label: 'inbounds.write', value: 'inbounds.write' },
+                      { label: 'clients.read', value: 'clients.read' },
+                      { label: 'clients.write', value: 'clients.write' },
+                      { label: 'settings.write', value: 'settings.write' },
+                      { label: 'routes.read', value: 'routes.read' },
+                    ]}
+                    value={permissionFlags}
+                    onChange={(v) => setPermissionFlags(v.map(String))}
+                  />
                 </div>
 
                 <div className="admin-management-grid">
@@ -472,8 +507,14 @@ export default function SecurityTab({ allSetting, updateSetting, saveSetting }: 
                     <span>Turkey SOCKS5</span>
                     <span className="country-config-badge">proxy://tr-socks5</span>
                     <span className="country-config-badge">inbound: country-tr</span>
-                    <span className="country-config-badge">permissions: geo-limits</span>
+                    <span className="country-config-badge">permission flags: geo-limits</span>
                   </div>
+                </div>
+
+                <div className="admin-add-user-submit">
+                  <Button type="primary" size="small" onClick={addAdminUser}>
+                    Add user
+                  </Button>
                 </div>
               </div>
             ),
