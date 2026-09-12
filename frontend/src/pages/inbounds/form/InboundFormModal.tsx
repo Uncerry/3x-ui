@@ -949,21 +949,44 @@ export default function InboundFormModal({
 
   const routeTab = (
     <>
-      <FormField name="proxySock5" label="SOCKS5 Source">
-        <Select
-          allowClear
-          showSearch
-          placeholder="Select route"
-          options={[
-            { value: 'tr-socks5', label: 'Regional Route — proxy://tr-socks5:1080' },
-            { value: 'geo-us', label: 'Regional Route — proxy://us-socks5:1080' },
-            { value: 'geo-jp', label: 'Regional Route — proxy://jp-socks5:1080' },
-          ]}
-        />
+      <FormField
+        name="customProxy"
+        label="Custom Proxy"
+        extra="Format: ip:port — e.g. 95.3.69.222:8080"
+      >
+        <Input placeholder="95.3.69.222:8080" allowClear />
       </FormField>
 
       <FormField name="proxyIp" label="Assigned IP / Client IP">
         <Input placeholder="172.16.0.22" />
+      </FormField>
+
+      <FormField
+        name="basicsMode"
+        label={
+          <span>
+            Basics{' '}
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                padding: '1px 5px',
+                borderRadius: 4,
+                background: 'linear-gradient(90deg,#f5a623,#e8512a)',
+                color: '#fff',
+                verticalAlign: 'middle',
+                marginLeft: 4,
+              }}
+            >
+              BETA
+            </span>
+          </span>
+        }
+        extra="Display-only mode: ping will always show -1. Use to showcase inbound structure."
+        valueProp="checked"
+      >
+        <Switch />
       </FormField>
     </>
   );

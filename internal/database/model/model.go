@@ -75,6 +75,12 @@ type Inbound struct {
 
 	DisableFlow bool `json:"disableFlow" form:"disableFlow" gorm:"column:disable_flow;default:false" example:"false"`
 
+	// CustomProxy is an optional upstream proxy address (ip:port) for this inbound.
+	// Display-only: stored in the panel DB, never sent to xray.
+	CustomProxy string `json:"customProxy" form:"customProxy" gorm:"column:custom_proxy;default:''"`
+	// BasicsMode is a display-only flag that forces ping to render as -1.
+	BasicsMode bool `json:"basicsMode" form:"basicsMode" gorm:"column:basics_mode;default:false"`
+
 	// OriginNodeGuid is the panelGuid of the node that physically hosts this
 	// inbound, propagated up across hops (#4983). Empty for an inbound that
 	// lives on this panel's own xray; set to the originating node's GUID when

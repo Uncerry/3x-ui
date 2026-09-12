@@ -47,6 +47,8 @@ export type DBInboundInit = Partial<{
   disableFlow: boolean;
   originNodeGuid: string;
   fallbackParent: FallbackParentRef | null;
+  customProxy: string;
+  basicsMode: boolean;
 }>;
 
 export function coerceInboundJsonField(value: unknown): Record<string, unknown> {
@@ -96,6 +98,8 @@ export class DBInbound {
   disableFlow: boolean;
   originNodeGuid: string;
   fallbackParent: FallbackParentRef | null;
+  customProxy: string;
+  basicsMode: boolean;
 
   private _clientStatsMap: Map<string, ClientStats> | null = null;
 
@@ -127,6 +131,8 @@ export class DBInbound {
     this.disableFlow = false;
     this.originNodeGuid = '';
     this.fallbackParent = null;
+    this.customProxy = '';
+    this.basicsMode = false;
     if (data == null) {
       return;
     }

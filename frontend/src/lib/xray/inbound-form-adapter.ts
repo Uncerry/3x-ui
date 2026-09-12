@@ -54,6 +54,8 @@ export interface RawInboundRow {
   shareAddr?: string;
   subSortIndex?: number;
   disableFlow?: boolean;
+  customProxy?: string;
+  basicsMode?: boolean;
   clientStats?: unknown;
 }
 
@@ -83,6 +85,8 @@ export interface WireInboundPayload {
   shareAddr: string;
   subSortIndex: number;
   disableFlow: boolean;
+  customProxy: string;
+  basicsMode: boolean;
 }
 
 function coerceJsonObject(value: unknown): Record<string, unknown> {
@@ -211,6 +215,8 @@ export function rawInboundToFormValues(row: RawInboundRow): InboundFormValues {
     shareAddr: row.shareAddr ?? '',
     subSortIndex: Math.max(1, row.subSortIndex ?? 1),
     disableFlow: row.disableFlow ?? false,
+    customProxy: row.customProxy ?? '',
+    basicsMode: row.basicsMode ?? false,
     protocol,
     settings,
   } as InboundFormValues;
@@ -377,6 +383,8 @@ export function formValuesToWirePayload(values: InboundFormValues): WireInboundP
     shareAddr: values.shareAddr,
     subSortIndex: values.subSortIndex,
     disableFlow: values.disableFlow,
+    customProxy: values.customProxy ?? '',
+    basicsMode: values.basicsMode ?? false,
   };
   if (values.nodeId != null) payload.nodeId = values.nodeId;
   return payload;

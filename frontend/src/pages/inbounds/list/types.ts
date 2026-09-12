@@ -34,6 +34,8 @@ export interface DBInboundRecord extends ProtocolFlags {
   nodeId?: number | null;
   settings: unknown;
   streamSettings: unknown;
+  customProxy?: string;
+  basicsMode?: boolean;
 }
 
 export interface ClientCountEntry {

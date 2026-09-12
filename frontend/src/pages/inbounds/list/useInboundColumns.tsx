@@ -140,6 +140,43 @@ export function useInboundColumns({
         align: 'center',
         width: 90,
         sorter: (a, b) => compareText(a.remark, b.remark),
+        render: (_, record) => {
+          const badges: ReactElement[] = [];
+          if (record.basicsMode) {
+            badges.push(
+              <Tag
+                key="basics"
+                style={{
+                  fontSize: 10,
+                  padding: '0 4px',
+                  lineHeight: '16px',
+                  background: 'linear-gradient(90deg,#f5a623,#e8512a)',
+                  border: 'none',
+                  color: '#fff',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                }}
+              >
+                BETA
+              </Tag>,
+            );
+          }
+          if (record.customProxy) {
+            badges.push(
+              <Tooltip key="proxy" title={`Proxy: ${record.customProxy}`}>
+                <Tag style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
+                  {record.customProxy}
+                </Tag>
+              </Tooltip>,
+            );
+          }
+          return (
+            <span>
+              {record.remark}
+              {badges.length > 0 && <span style={{ marginLeft: 4 }}>{badges}</span>}
+            </span>
+          );
+        },
       });
     }
 
