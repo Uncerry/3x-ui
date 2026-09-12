@@ -1770,6 +1770,8 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 		oldInbound.Settings = inbound.Settings
 		oldInbound.StreamSettings = inbound.StreamSettings
 		oldInbound.Sniffing = inbound.Sniffing
+		oldInbound.CustomProxy = inbound.CustomProxy
+		oldInbound.BasicsMode = inbound.BasicsMode
 		if strings.TrimSpace(inbound.ShareAddrStrategy) == "" {
 			normalizeInboundShareAddress(oldInbound)
 			inbound.ShareAddrStrategy = oldInbound.ShareAddrStrategy
