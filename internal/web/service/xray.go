@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -427,7 +428,125 @@ func (s *XrayService) GetXrayConfig() (*xray.Config, error) {
 		injectNodeEgresses(xrayConfig, nodes)
 	}
 
+	// Inject per-inbound custom proxy outbounds + routing rules.
+	injectCustomProxyEgresses(xrayConfig, inbounds)
+
 	return xrayConfig, nil
+}
+
+// injectCustomProxyEgresses adds an HTTP/SOCKS outbound + routing rule for each
+// enabled local inbound that has a non-empty CustomProxy ("ip:port" or
+// "scheme://ip:port"). The rule sends only that inbound's traffic through the
+// proxy. Follows the same hot-appliable, template-untouched pattern as
+// injectPanelEgress and injectNodeEgresses.
+func injectCustomProxyEgresses(cfg *xray.Config, inbounds []*model.Inbound) {
+	var existingOutbounds []any
+	if len(cfg.OutboundConfigs) > 0 {
+		if err := json.Unmarshal(cfg.OutboundConfigs, &existingOutbounds); err != nil {
+			logger.Warning("custom proxy egress: outbounds unparsable, skipping:", err)
+			return
+		}
+	}
+
+	routing := map[string]any{}
+	if len(cfg.RouterConfig) > 0 {
+		if err := json.Unmarshal(cfg.RouterConfig, &routing); err != nil {
+			logger.Warning("custom proxy egress: routing unparsable, skipping:", err)
+			return
+		}
+	}
+	rules, _ := routing["rules"].([]any)
+	newRules := make([]any, 0)
+	changed := false
+
+	for _, inbound := range inbounds {
+		if !inbound.Enable || inbound.NodeID != nil || strings.TrimSpace(inbound.CustomProxy) == "" {
+			continue
+		}
+		raw := strings.TrimSpace(inbound.CustomProxy)
+		scheme, addr := parseCustomProxy(raw)
+		if addr == "" {
+			logger.Warning("custom proxy egress: invalid proxy address for inbound [", inbound.Tag, "]:", raw)
+			continue
+		}
+		outTag := "custom-proxy-" + inbound.Tag
+		outbound := buildProxyOutbound(outTag, scheme, addr)
+		existingOutbounds = append(existingOutbounds, outbound)
+		newRules = append(newRules, map[string]any{
+			"type":        "field",
+			"inboundTag":  []any{inbound.Tag},
+			"outboundTag": outTag,
+		})
+		changed = true
+	}
+
+	if !changed {
+		return
+	}
+
+	outJSON, err := json.Marshal(existingOutbounds)
+	if err != nil {
+		logger.Warning("custom proxy egress: failed to marshal outbounds:", err)
+		return
+	}
+	cfg.OutboundConfigs = json_util.RawMessage(outJSON)
+
+	routing["rules"] = append(newRules, rules...)
+	routingJSON, err := json.Marshal(routing)
+	if err != nil {
+		logger.Warning("custom proxy egress: failed to marshal routing:", err)
+		return
+	}
+	cfg.RouterConfig = json_util.RawMessage(routingJSON)
+}
+
+// parseCustomProxy splits "scheme://host:port" or "host:port" into (scheme, "host:port").
+// Returns ("http", addr) as the default scheme when none is specified.
+func parseCustomProxy(raw string) (scheme, addr string) {
+	if idx := strings.Index(raw, "://"); idx >= 0 {
+		return strings.ToLower(raw[:idx]), raw[idx+3:]
+	}
+	return "http", raw
+}
+
+// buildProxyOutbound returns a minimal Xray outbound config map for an HTTP or
+// SOCKS proxy. SOCKS5 is selected when scheme is "socks" or "socks5", HTTP otherwise.
+func buildProxyOutbound(tag, scheme, addr string) map[string]any {
+	host, port := splitHostPort(addr)
+	portN := 0
+	if n, err := strconv.Atoi(port); err == nil {
+		portN = n
+	}
+	if scheme == "socks" || scheme == "socks5" {
+		return map[string]any{
+			"tag":      tag,
+			"protocol": "socks",
+			"settings": map[string]any{
+				"servers": []any{
+					map[string]any{"address": host, "port": portN},
+				},
+			},
+		}
+	}
+	// Default: HTTP proxy
+	return map[string]any{
+		"tag":      tag,
+		"protocol": "http",
+		"settings": map[string]any{
+			"servers": []any{
+				map[string]any{"address": host, "port": portN},
+			},
+		},
+	}
+}
+
+// splitHostPort splits "host:port" safely, returning ("", "") for bad input.
+func splitHostPort(addr string) (host, port string) {
+	i := strings.LastIndex(addr, ":")
+	if i < 0 {
+		return addr, ""
+	}
+	return addr[:i], addr[i+1:]
 }
 
 // PanelEgressInboundTag is the tag of the loopback SOCKS inbound injected into
